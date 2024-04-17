@@ -1,0 +1,177 @@
+package com.example.demo.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name="lib")
+public class Lib {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;
+	private String name;
+	@Override
+	public String toString() {
+		return "Lib [id=" + id + ", name=" + name + "]";
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public Lib(int id, String name) {
+		super();
+		this.id = id;
+		this.name = name;
+	}
+	
+	public Lib() {}
+}
+
+
+package com.example.demo.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.entity.Lib;
+import com.example.demo.repo.LibRepo;
+
+@RestController
+public class LibController {
+
+	@Autowired
+	LibRepo repo;
+	
+	@GetMapping("/lib/all")
+	public List<Lib> print(){
+		return repo.findEverything();		
+	}
+	
+	@GetMapping("/lib/get/{id}")
+	public Lib print(@PathVariable int id) {
+		return repo.findEverythingById(id);
+	}
+	
+	@PostMapping("/lib/post")
+	public String printpost(@RequestBody Lib lib) {
+		repo.save(lib);
+		return "Created";
+	}
+	
+	@DeleteMapping("/lib/del/{id}")
+	public String print2(@PathVariable int id) {
+		repo.findByDelete(id);
+		return "Deleted";
+	}
+	
+	@PutMapping("/lib/up/{id}/{name}")
+	public String print3(@PathVariable int id,@PathVariable String name) {
+		repo.findByUpdate(id,name);
+		return "Updated";
+	}
+	
+	@GetMapping("/lib/auth/{id}/{name}")
+	public String print4(@PathVariable int id,@PathVariable String name) {
+		Lib lib=repo.findBooksById(id);
+		if(lib!=null) {
+			if(lib.getName().equals(name) && lib.getId()==id) {
+				return "valid";
+			}else {
+				return "They do not match";
+			}
+		}else {
+			return "invalid";
+		}
+	}
+	
+	@GetMapping("/lib/page")
+	public ResponseEntity<Page<Lib>> print5(
+			@RequestParam(defaultValue = "1")int page,
+			@RequestParam(defaultValue = "10")int size){
+		PageRequest pageable=PageRequest.of(page, size);
+		Page<Lib> libs=repo.findAll(pageable);
+		return ResponseEntity.ok(libs);
+	}
+	
+	@GetMapping("/lib/sort/asc")
+	public List<Lib> print6(){
+		return repo.findAll(Sort.by(Sort.Direction.ASC,"name"));
+	}
+	
+	@GetMapping("/lib/sort/desc")
+	public List<Lib> print7(){
+		return repo.findAll(Sort.by(Sort.Direction.DESC,"name"));
+	}
+}
+
+
+package com.example.demo.repo;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.example.demo.entity.Lib;
+
+import jakarta.transaction.Transactional;
+
+public interface LibRepo extends JpaRepository<Lib, Integer>{
+
+	@Query("select l from Lib l")
+	List<Lib> findEverything();
+
+	@Query("select l from Lib l where l.id=:id")
+	Lib findEverythingById(int id);
+
+	@Modifying
+	@Transactional
+	@Query("insert into Lib (id,name) values (:id,:name)")
+	void printpost(@Param("id")int id,@Param("name")String name);
+
+	@Modifying
+	@Transactional
+	@Query("delete from Lib l where l.id=:id")
+	void findByDelete(int id);
+
+	@Modifying
+	@Transactional
+	@Query("update Lib l set l.name=:name where l.id=:id")
+	void findByUpdate(int id, String name);
+
+	Lib findBooksById(int id);
+}
+
+
+spring.jpa.hibernate.ddl-auto=update
+spring.datasource.url=jdbc:mysql://localhost:3306/db2
+spring.datasource.username=root
+spring.datasource.password=anusha
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
